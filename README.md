@@ -82,6 +82,6 @@ npm run dev
 Navigate to `http://localhost:3000` in your browser.
 
 ## Submission Links
-- **GitHub Repository**: [[Insert Link]](https://github.com/GagansharmaGit/A-Million-Checkbox)
-- **Live Deployment**: [[Insert Link]](https://a-million-checkbox.onrender.com)
-- **Demo Video (YouTube Unlisted)**: [[Insert Link]](https://youtu.be/UseVcfHcIho)
+- **GitHub Repository**: [[codebase]](https://github.com/GagansharmaGit/A-Million-Checkbox)
+- **Live Deployment**: [[live link]](https://a-million-checkbox.onrender.com)
+- **Demo Video (YouTube Unlisted)**: [[youtube]](https://youtu.be/UseVcfHcIho)
