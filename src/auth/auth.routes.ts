@@ -95,13 +95,107 @@ router.get("/callback", async (req, res) => {
     res.cookie("session_token", sessionJwt, COOKIE_OPTIONS);
 
     res.send(`
-      <html>
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Chakra Restored - Konoha OIDC</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600&display=swap');
+            body {
+              margin: 0;
+              padding: 0;
+              background-color: #09090b;
+              color: white;
+              font-family: 'Inter', sans-serif;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              overflow: hidden;
+            }
+            .glow-red {
+              position: absolute;
+              width: 300px;
+              height: 300px;
+              background: radial-gradient(circle, rgba(229,9,20,0.15) 0%, rgba(0,0,0,0) 70%);
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              z-index: 0;
+            }
+            .card {
+              background: rgba(9, 9, 11, 0.9);
+              border: 1px solid rgba(229, 9, 20, 0.3);
+              border-radius: 12px;
+              padding: 40px;
+              text-align: center;
+              z-index: 10;
+              box-shadow: 0 0 40px rgba(229, 9, 20, 0.1);
+              max-width: 400px;
+              width: 90%;
+            }
+            h1 {
+              font-family: 'Cinzel', serif;
+              color: #E50914;
+              margin-bottom: 10px;
+              letter-spacing: 2px;
+            }
+            p {
+              color: #a1a1aa;
+              font-size: 14px;
+              line-height: 1.6;
+              margin-bottom: 30px;
+            }
+            .btn {
+              background: #E50914;
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 4px;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              cursor: pointer;
+              transition: all 0.2s;
+              box-shadow: 0 0 15px rgba(229, 9, 20, 0.3);
+            }
+            .btn:hover {
+              background: #cc0812;
+              transform: translateY(-1px);
+            }
+            .icon {
+              font-size: 48px;
+              margin-bottom: 20px;
+              display: block;
+            }
+          </style>
+        </head>
         <body>
+          <div class="glow-red"></div>
+          <div class="card">
+            <span class="icon">🔥</span>
+            <h1>Blood Pact Sealed</h1>
+            <p>Your chakra signature has been verified. The connection to the Hidden Leaf Identity Server is complete.</p>
+            <button class="btn" onclick="closeWindow()">Return to Village</button>
+            <p style="margin-top: 20px; font-size: 12px; opacity: 0.5;">If this window does not close automatically, please click the button.</p>
+          </div>
           <script>
-            window.opener.postMessage('konoha_login_success', '*');
-            window.close();
+            function closeWindow() {
+              try {
+                if (window.opener) {
+                  window.opener.postMessage('konoha_login_success', '*');
+                }
+              } catch (e) {
+                console.error("Could not post message to opener", e);
+              }
+              window.close();
+            }
+            // Attempt auto-close immediately
+            setTimeout(closeWindow, 500);
           </script>
-          <p>Login successful! You can close this window.</p>
         </body>
       </html>
     `);
