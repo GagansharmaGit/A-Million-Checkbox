@@ -62,8 +62,12 @@ loginBtn.addEventListener('click', () => {
 // Listen for message from popup
 window.addEventListener('message', (event) => {
     if (event.data === 'konoha_login_success') {
-        showToast('Login Successful! Chakra restored.');
+        showToast('Login Successful! Chakra restored. Reconnecting...');
         checkAuth();
+        // Reload page to re-establish WebSocket connection with the new session cookie
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
     }
 });
 
