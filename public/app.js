@@ -204,7 +204,7 @@ scrollContainer.addEventListener('scroll', () => {
     }
 });
 
-scrollContainer.addEventListener('mousedown', (e) => {
+scrollContainer.addEventListener('click', (e) => {
     if (!isAuthenticated) {
         showToast("You lack the Chakra to do this! Login first.");
         return;

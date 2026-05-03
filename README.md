@@ -1,71 +1,87 @@
-# 1 Million Checkboxes - Konoha Edition 🍥
+# A Million Checkboxes (Naruto Edition)
 
-A real-time, highly scalable web application where 1 million checkboxes can be toggled by users synchronously across multiple browser instances. 
+A real-time, massively multiplayer web application where users can interact with a grid of one million checkboxes. Built from scratch to handle high concurrency, state synchronization, and custom authentication flows.
 
-Inspired by "1 Million Checkboxes" and themed around Naruto's Hidden Leaf Village, this project demonstrates real-time communication, highly efficient state management, and custom rate limiting.
+## Project Overview
+This project implements the "1 Million Checkboxes" concept with a custom architecture. It utilizes WebSockets for real-time synchronization, Redis for compact state storage and cross-instance broadcasting, and a custom-built OIDC Identity Provider for authentication.
 
-## 🚀 Features Implemented
+## Tech Stack
+- **Frontend**: HTML5, Vanilla JavaScript, Canvas API
+- **Backend**: Node.js, Express.js
+- **Real-time**: Socket.io
+- **Data Store & Message Broker**: Redis
+- **Authentication**: Custom OIDC / OAuth 2.0 Server
 
-- **1 Million Checkbox Grid**: Rendered performantly using HTML5 Canvas to avoid DOM crashes.
-- **Real-Time Sync**: WebSockets (Socket.io) broadcast checkbox toggles to all users instantly.
-- **OIDC Authentication**: Integrates with the custom Hidden Leaf OIDC Server. Only registered Ninjas can toggle boxes (guests are read-only).
-- **Efficient State Storage**: Checkbox states are stored in Redis using a **Bitfield**. 1,000,000 checkboxes consume only ~125 KB of memory!
-- **Scalable Pub/Sub**: Redis Pub/Sub is used so that updates can be broadcast across multiple horizontally scaled Node.js server instances.
-- **Custom Rate Limiting**: Built entirely from scratch using Redis (no external `express-rate-limit` packages). Prevents API abuse and WebSocket spam clicking.
+## Features Implemented
+- Virtualized Canvas Rendering for 1,000,000 checkboxes (highly performant).
+- Real-time state broadcasting via WebSockets.
+- Redis Pub/Sub architecture to support multiple backend instances.
+- Custom Redis-backed Rate Limiter (IP/User/Socket based) without external rate-limit packages.
+- Cross-domain Authentication flow via custom OIDC Provider.
+- Spectator mode for unauthenticated users (read-only access).
+- Mobile-friendly tap interactions.
 
-## 🛠 Tech Stack
+## Architecture & Implementation Details
 
-- **Frontend**: HTML5 Canvas, Vanilla JS, CSS (No frameworks!)
-- **Backend**: Node.js, Express, Socket.io
-- **Database / Cache**: Redis (ioredis) for Bitfields, Pub/Sub, and Rate Limiting
-- **Auth**: Custom OIDC integration using PKCE & JWT session cookies (jose)
+### Checkbox State Storage
+The entire state of 1,000,000 checkboxes is stored efficiently using Redis `BITFIELD`. Instead of storing boolean arrays or JSON objects, the state is mapped to binary bits, reducing the memory footprint to approximately 125 KB. The backend reads this buffer and serves it via base64 encoding during the initial client connection.
 
-## ⚙️ How to Run Locally
+### WebSocket Flow
+1. **Connection**: Client connects to `socket.io`. The backend fetches the Redis bitfield and emits the initial state.
+2. **Action**: User clicks a checkbox. Client emits `client:toggle` with the index and desired state.
+3. **Verification**: Backend validates the user's JWT session, applies rate limiting, and flips the specific bit in Redis.
+4. **Broadcast**: The backend publishes a message via Redis Pub/Sub. All subscribed server instances receive the update and broadcast `server:toggle` to connected clients.
+
+### Custom Rate Limiting
+Implemented manually using Redis without external packages like `express-rate-limit`. 
+- **HTTP Limiting**: Uses an IP-based rolling window to restrict login attempts.
+- **WebSocket Spam Protection**: Uses a rolling window mechanism based on user ID to prevent spam clicking. It tracks timestamps in a Redis List, applying limits dynamically (e.g., max 10 clicks per rolling window).
+
+### Auth Flow Explanation (OIDC / OAuth 2.0)
+Authentication is handled by an external, custom-built OpenID Connect provider.
+1. The client opens a popup to initiate the OAuth flow.
+2. The Authorization code is exchanged for an access token via a secure backend route.
+3. The backend sets an `HttpOnly`, `Secure` session cookie.
+4. The frontend performs an automatic page reload after a successful login to establish the WebSocket connection with the attached authenticated cookie.
+5. Socket middleware verifies the JWT token before allowing toggle actions.
+
+## Setup Instructions
 
 ### Prerequisites
-1. Ensure you have **Node.js** (v18+) and **Redis** running locally.
-2. The **Hidden Leaf OIDC Server** must be running on `http://localhost:3000`.
+- Node.js (v18+)
+- Redis Server
+- Configured OIDC Provider (Konoha OIDC Server)
 
-### Setup Instructions
+### Environment Variables
+Create a `.env` file in the root directory:
+```env
+PORT=3000
+APP_URL=http://localhost:3000
+REDIS_URL=redis://localhost:6379
+SESSION_SECRET=your_secure_random_string
+OIDC_ISSUER=http://localhost:3001
+OIDC_CLIENT_ID=your_client_id
+OIDC_CLIENT_SECRET=your_client_secret
+```
 
-1. Clone the repository and navigate into the folder.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Copy the environment variables template:
-   ```bash
-   cp .env.example .env
-   ```
-4. **Register the App**: Go to the OIDC Server Dashboard (`http://localhost:3001/dashboard`). Register an app with the redirect URI: `http://localhost:9000/auth/callback`. Copy the Client ID and paste it into `.env`.
-5. Start the development server:
-   ```bash
-   npm run dev
-   ```
-6. Open your browser to `http://localhost:9000`.
+### Redis Setup
+If using Docker, run a local Redis instance:
+```bash
+docker run -d -p 6379:6379 --name redis redis:alpine
+```
+Ensure `REDIS_URL` matches your local or remote Redis instance.
 
-## 🔒 Auth Flow Explanation
+### Running Locally
+```bash
+# Install dependencies
+npm install
 
-The app uses an **Authorization Code Flow with PKCE** executed entirely on the backend to keep it secure:
-1. When a user clicks "Login with Konoha", they hit `/auth/login`. The server generates a PKCE verifier, saves it in a short-lived secure cookie, and redirects the user to the OIDC Identity Server.
-2. After authentication, the OIDC server redirects the user back to `/auth/callback` with a `code`.
-3. The backend exchanges the `code` + `verifier` for an `id_token` from the OIDC server.
-4. The backend reads the user profile from the token, generates its own signed Session JWT, and stores it in an `HttpOnly` cookie.
-5. The Socket.io connection automatically picks up this cookie, allowing seamless authenticated real-time interactions!
+# Start the development server
+npm run dev
+```
+Navigate to `http://localhost:3000` in your browser.
 
-## ⚡ WebSocket & Redis Flow Explanation
-
-1. **Initial Load**: When a user connects, the server performs a `GET` on the Redis key `checkboxes:state` and sends the entire 125KB binary buffer to the client as Base64.
-2. **Toggling**: When an authenticated user clicks a checkbox, they emit `client:toggle` with the `index`.
-3. **Database Update**: The server updates the specific bit in Redis using `SETBIT checkboxes:state <index> 1/0`. This is an O(1) operation.
-4. **Pub/Sub Broadcast**: The server publishes a message to the `checkboxes:updates` Redis channel.
-5. **Real-time Sync**: Every server instance subscribed to the channel receives the message and uses `io.emit('server:toggle')` to update all connected clients in real time.
-
-## 🛡️ Rate Limiting Logic Explanation
-
-Rate limiting is built custom using Redis sliding/fixed window counters:
-- **HTTP Limiter**: When a user hits `/auth/login`, we increment a Redis key `rate-limit:http:<IP>:<WindowTimestamp>`. If it exceeds 20 requests per minute, we block them. The key expires after 1 minute.
-- **WebSocket Spam Protection**: When a user emits `client:toggle`, we increment `rate-limit:ws:<User_ID>:<WindowTimestamp>`. We limit users to 20 clicks per 10 seconds. This stops users from writing malicious scripts that spam the Socket.io server.
-
----
-*Built with Chakra and Node.js for the 1 Million Checkboxes Challenge.*
+## Submission Links
+- **GitHub Repository**: [Insert Link]
+- **Live Deployment**: [Insert Link]
+- **Demo Video (YouTube Unlisted)**: [Insert Link]
