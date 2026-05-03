@@ -56,7 +56,25 @@ loginBtn.addEventListener('click', () => {
     const height = 700;
     const left = (window.innerWidth / 2) - (width / 2);
     const top = (window.innerHeight / 2) - (height / 2);
-    window.open('/auth/login', 'KonohaLogin', `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`);
+    const popup = window.open('/auth/login', 'KonohaLogin', `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`);
+    
+    // Fallback: Poll popup to see if it closed, then check auth
+    const pollTimer = setInterval(async () => {
+        try {
+            if (!popup || popup.closed) {
+                clearInterval(pollTimer);
+                // Verify auth and auto-refresh
+                const res = await fetch('/auth/me');
+                const data = await res.json();
+                if (data.authenticated && !isAuthenticated) {
+                    showToast('Login Successful! Chakra restored. Reconnecting...');
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            }
+        } catch (e) {
+            // Cross-origin errors are expected during OAuth redirects
+        }
+    }, 500);
 });
 
 // Listen for message from popup
